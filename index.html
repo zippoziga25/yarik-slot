@@ -30,12 +30,12 @@
     <main class="max-w-6xl mx-auto px-4 py-8 flex-grow w-full">
         <div class="mb-8 border-b border-zinc-800 pb-4">
             <h2 class="text-2xl font-bold tracking-tight">Активні лоти</h2>
-            <p class="text-zinc-400 text-sm mt-1">Обирайте лот, вказуйте ім'я зверху та робіть ставки з клавіатури.</p>
+            <p class="text-zinc-400 text-sm mt-1">Обирайте лот, вказуйте ім'я зверху та робіть ставки.</p>
         </div>
 
         <!-- Сітка з лотами -->
         <div id="lots-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Лоти генеруються автоматично з JavaScript -->
+            <!-- Лоти генеруються автоматично -->
         </div>
     </main>
 
@@ -44,6 +44,10 @@
     </footer>
 
     <script>
+        // КЛЮЧІ ДЛЯ ЗБЕРЕЖЕННЯ
+        const JSONBIN_BIN_ID = "6a62853fda38895dfe86e902"; 
+        const JSONBIN_API_KEY = "$2a$10$1pfAcQ59TkOxkX3Paah1AOWq2DB5YeESkKuyFb3h/YqSoGG7S4Ywe";
+
         // ІНІЦІАЛІЗАЦІЯ ІМЕНІ
         let currentUserName = localStorage.getItem('auction_user') || '';
         const usernameInput = document.getElementById('username-input');
@@ -57,14 +61,14 @@
 
         /* 
         -------------------------------------------------------------------
-        СПИСОК ЛОТІВ (СЮДИ ТИ ДОДАЄШ НОВІ ТОВАРИ РУЧКАМИ ЧЕРЕЗ КОД)
+        СПИСОК ЛОТІВ (ТУТ МОЖНА ЗМІНЮВАТИ ТОВАРИ)
         -------------------------------------------------------------------
         */
         const initialLots = [
             {
                 id: 'lot-1',
                 title: 'Ковбаска Ярослава',
-                image: 'images/photo1.jpg',
+                image: 'images/cross.jpg',
                 startBid: 1000,
                 endTime: '2026-08-01T20:00:00'
             },
@@ -77,11 +81,39 @@
             }
         ];
 
-        // Збереження ставок в пам'яті браузера
-        let bidsData = JSON.parse(localStorage.getItem('auction_bids_db')) || {};
+        let bidsData = {};
 
-        function saveBids() {
-            localStorage.setItem('auction_bids_db', JSON.stringify(bidsData));
+        // Завантаження ставок з сервера
+        async function fetchBids() {
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+                    headers: { 'X-Master-Key': JSONBIN_API_KEY }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    bidsData = data.record || {};
+                    renderLots();
+                }
+            } catch (err) {
+                console.error("Помилка завантаження ставок:", err);
+            }
+        }
+
+        // Збереження нових ставок на сервер
+        async function saveBidsOnline(updatedData) {
+            try {
+                await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': JSONBIN_API_KEY
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+                fetchBids(); // Оновлюємо дані одразу після ставки
+            } catch (err) {
+                alert("Не вдалося зберегти ставку. Перевірте з'єднання.");
+            }
         }
 
         function renderLots() {
@@ -92,7 +124,6 @@
                 return;
             }
 
-            // Перемальовуємо повністю лише якщо кількість лотів змінилася
             if (grid.children.length !== initialLots.length) {
                 grid.innerHTML = '';
                 initialLots.forEach(lot => {
@@ -192,10 +223,10 @@
             });
         }
 
-        // Логіка ставки
+        // Зробити ставку
         function placeBid(lotId, currentBid) {
             if (!currentUserName) {
-                alert("Будь ласка, вкажіть ваше ім'я у верхньому правому кутку перед тим, як робити ставку!");
+                alert("Будь ласка, вкажіть ваше ім'я у верхньому правому кутку!");
                 return;
             }
 
@@ -210,9 +241,7 @@
                 return;
             }
 
-            if (!bidsData[lotId]) {
-                bidsData[lotId] = [];
-            }
+            if (!bidsData[lotId]) bidsData[lotId] = [];
 
             bidsData[lotId].unshift({
                 bidder: currentUserName,
@@ -220,8 +249,7 @@
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
 
-            saveBids();
-            renderLots();
+            saveBidsOnline(bidsData);
         }
 
         function formatTime(seconds) {
@@ -235,8 +263,11 @@
             return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
         }
 
+        // Перевірка оновлення кожні 3 секунди
+        setInterval(fetchBids, 3000);
         setInterval(renderLots, 1000);
-        renderLots();
+
+        fetchBids();
     </script>
 </body>
 </html>
