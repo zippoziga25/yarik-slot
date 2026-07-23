@@ -35,7 +35,7 @@
 
         <!-- Сітка з лотами -->
         <div id="lots-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Лоти генеруються автоматично -->
+            <!-- Лоти генеруються автоматично з JavaScript -->
         </div>
     </main>
 
@@ -44,7 +44,7 @@
     </footer>
 
     <script>
-        // КЛЮЧІ ДЛЯ ЗБЕРЕЖЕННЯ
+        // КЛЮЧІ ДЛЯ ОНЛАЙН-СИНХРОНІЗАЦІЇ
         const JSONBIN_BIN_ID = "6a62853fda38895dfe86e902"; 
         const JSONBIN_API_KEY = "$2a$10$1pfAcQ59TkOxkX3Paah1AOWq2DB5YeESkKuyFb3h/YqSoGG7S4Ywe";
 
@@ -61,22 +61,22 @@
 
         /* 
         -------------------------------------------------------------------
-        СПИСОК ЛОТІВ (ТУТ МОЖНА ЗМІНЮВАТИ ТОВАРИ)
+        СПИСОК ЛОТІВ
         -------------------------------------------------------------------
         */
         const initialLots = [
             {
                 id: 'lot-1',
                 title: 'Ковбаска Ярослава',
-                image: 'images/cross.jpg',
+                image: 'images/photo1.jpg',
                 startBid: 1000,
                 endTime: '2026-08-01T20:00:00'
             },
             {
                 id: 'lot-2',
-                title: 'Назва другого товару',
-                image: 'images/phone.jpg',
-                startBid: 2500,
+                title: 'Ярослав',
+                image: 'images/photo2.jpg',
+                startBid: 2500000,
                 endTime: '2026-08-05T15:30:00'
             }
         ];
@@ -110,7 +110,7 @@
                     },
                     body: JSON.stringify(updatedData)
                 });
-                fetchBids(); // Оновлюємо дані одразу після ставки
+                fetchBids();
             } catch (err) {
                 alert("Не вдалося зберегти ставку. Перевірте з'єднання.");
             }
@@ -156,11 +156,11 @@
                 const currentInputValue = inputEl ? inputEl.value : minNextBid;
 
                 card.innerHTML = `
-                    <div class="relative h-56 bg-zinc-950 overflow-hidden border-b border-zinc-800">
+                    <div class="relative h-64 bg-zinc-950 overflow-hidden border-b border-zinc-800 flex items-center justify-center">
                         <img src="${lot.image}" alt="${lot.title}" 
                              onerror="this.onerror=null; this.src='https://placehold.co/600x400/18181b/a1a1aa?text=No+Image+in+images/';"
-                             class="w-full h-full object-cover">
-                        <div class="absolute top-3 right-3 ${isEnded ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-100 text-zinc-900'} px-2.5 py-1 rounded text-xs font-mono font-bold tracking-wider uppercase">
+                             class="w-full h-full object-contain p-2">
+                        <div class="absolute top-3 right-3 ${isEnded ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-100 text-zinc-900'} px-2.5 py-1 rounded text-xs font-mono font-bold tracking-wider uppercase shadow">
                             ${formatTime(timeLeftSec)}
                         </div>
                     </div>
@@ -226,7 +226,7 @@
         // Зробити ставку
         function placeBid(lotId, currentBid) {
             if (!currentUserName) {
-                alert("Будь ласка, вкажіть ваше ім'я у верхньому правому кутку!");
+                alert("Будь ласка, вкажіть ваше ім'я у верхньому правому кутку перед тим, як робити ставку!");
                 return;
             }
 
@@ -241,7 +241,9 @@
                 return;
             }
 
-            if (!bidsData[lotId]) bidsData[lotId] = [];
+            if (!bidsData[lotId]) {
+                bidsData[lotId] = [];
+            }
 
             bidsData[lotId].unshift({
                 bidder: currentUserName,
@@ -263,7 +265,7 @@
             return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
         }
 
-        // Перевірка оновлення кожні 3 секунди
+        // Перевіряємо нові ставки з сервера кожні 3 секунди
         setInterval(fetchBids, 3000);
         setInterval(renderLots, 1000);
 
