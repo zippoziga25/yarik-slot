@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аукціон</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen font-sans flex flex-col">
+
+    <!-- Шапка сайту -->
+    <header class="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-mono uppercase tracking-widest text-zinc-400 border border-zinc-700 px-2 py-1 rounded">Auction</span>
+                <h1 class="text-xl font-bold uppercase tracking-wide text-zinc-100">Онлайн Аукціон</h1>
+            </div>
+            
+            <!-- Введення імені покупця -->
+            <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-lg flex items-center gap-3">
+                <span class="text-xs text-zinc-400 font-medium">Ваше ім'я:</span>
+                <input type="text" id="username-input" placeholder="Введіть ім'я..." 
+                       class="bg-transparent text-zinc-100 font-semibold text-sm focus:outline-none w-36 border-b border-zinc-700 focus:border-zinc-300">
+            </div>
+        </div>
+    </header>
+
+    <!-- Головна сторінка -->
+    <main class="max-w-6xl mx-auto px-4 py-8 flex-grow w-full">
+        <div class="mb-8 border-b border-zinc-800 pb-4">
+            <h2 class="text-2xl font-bold tracking-tight">Активні лоти</h2>
+            <p class="text-zinc-400 text-sm mt-1">Обирайте лот, вказуйте ім'я зверху та робіть ставки з клавіатури.</p>
+        </div>
+
+        <!-- Сітка з лотами -->
+        <div id="lots-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Лоти генеруються автоматично з JavaScript -->
+        </div>
+    </main>
+
+    <footer class="bg-zinc-900 border-t border-zinc-800 py-6 text-center text-zinc-500 text-xs uppercase tracking-wider">
+        <p>© 2026 Аукціон. Всі права захищено.</p>
+    </footer>
+
+    <script>
+        // ІНІЦІАЛІЗАЦІЯ ІМЕНІ
+        let currentUserName = localStorage.getItem('auction_user') || '';
+        const usernameInput = document.getElementById('username-input');
+        usernameInput.value = currentUserName;
+
+        usernameInput.addEventListener('input', (e) => {
+            currentUserName = e.target.value.trim();
+            localStorage.setItem('auction_user', currentUserName);
+            renderLots();
+        });
+
+        /* 
+        -------------------------------------------------------------------
+        СПИСОК ЛОТІВ (СЮДИ ТИ ДОДАЄШ НОВІ ТОВАРИ РУЧКАМИ ЧЕРЕЗ КОД)
+        -------------------------------------------------------------------
+        */
+        const initialLots = [
+            {
+                id: 'lot-1',
+                title: 'Кросівки Nike Air Max',
+                image: 'images/photo1.jpg',
+                startBid: 1000,
+                endTime: '2026-08-01T20:00:00'
+            },
+            {
+                id: 'lot-2',
+                title: 'Годинник Casio Vintage',
+                image: 'images/photo2.jpg',
+                startBid: 500,
+                endTime: '2026-08-02T18:00:00'
+            }
+        ];
+
+        // Збереження ставок в пам'яті браузера
+        let bidsData = JSON.parse(localStorage.getItem('auction_bids_db')) || {};
+
+        function saveBids() {
+            localStorage.setItem('auction_bids_db', JSON.stringify(bidsData));
+        }
+
+        function renderLots() {
+            const grid = document.getElementById('lots-grid');
+            
+            // Зберігаємо поточні значення з полів вводу, щоб вони не зникали при таймері
+            const inputValues = {};
+            initialLots.forEach(lot => {
+                const el = document.getElementById(`input-${lot.id}`);
+                if (el && document.activeElement === el) {
+                    inputValues[lot.id] = el.value;
+                }
+            });
+
+            grid.innerHTML = '';
+
+            if (initialLots.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-500">Наразі немає активних лотів.</div>`;
+                return;
+            }
+
+            initialLots.forEach(lot => {
+                const lotBids = bidsData[lot.id] || [];
+                const highestBidObj = lotBids.length > 0 ? lotBids[0] : null;
+                
+                const currentBid = highestBidObj ? highestBidObj.amount : lot.startBid;
+                const highestBidder = highestBidObj ? highestBidObj.bidder : 'Немає ставок';
+
+                const endTimeMs = new Date(lot.endTime).getTime();
+                const now = Date.now();
+                const timeLeftSec = Math.max(0, Math.floor((endTimeMs - now) / 1000));
+                const isEnded = timeLeftSec === 0;
+
+                const minNextBid = lotBids.length > 0 ? currentBid + 50 : currentBid;
+                const isUserLeading = highestBidder === currentUserName && currentUserName !== '';
+
+                const card = document.createElement('div');
+                card.className = `bg-zinc-900 rounded-xl border ${isUserLeading ? 'border-zinc-400' : 'border-zinc-800'} overflow-hidden flex flex-col shadow-md`;
+
+                card.innerHTML = `
+                    <div class="relative h-56 bg-zinc-950 overflow-hidden border-b border-zinc-800">
+                        <img src="${lot.image}" alt="${lot.title}" 
+                             onerror="this.onerror=null; this.src='https://placehold.co/600x400/18181b/a1a1aa?text=No+Image+in+images/';"
+                             class="w-full h-full object-cover">
+                        <div class="absolute top-3 right-3 ${isEnded ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-100 text-zinc-900'} px-2.5 py-1 rounded text-xs font-mono font-bold tracking-wider uppercase">
+                            ${formatTime(timeLeftSec)}
+                        </div>
+                    </div>
+
+                    <div class="p-5 flex-grow flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-zinc-100 mb-4">${lot.title}</h3>
+
+                            <div class="bg-zinc-950 rounded-lg p-3 mb-4 border border-zinc-800/80 flex justify-between items-center">
+                                <div>
+                                    <span class="text-[11px] text-zinc-500 uppercase font-semibold block">Поточна ставка</span>
+                                    <span class="text-lg font-bold font-mono text-zinc-100">
+                                        ${currentBid.toLocaleString('uk-UA')} грн
+                                    </span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[11px] text-zinc-500 uppercase font-semibold block">Лідер</span>
+                                    <span class="text-xs font-medium text-zinc-300">
+                                        ${highestBidder}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            ${!isEnded ? `
+                                <div class="flex gap-2 mb-4">
+                                    <input type="number" id="input-${lot.id}" 
+                                           placeholder="Мін: ${minNextBid}" 
+                                           value="${inputValues[lot.id] !== undefined ? inputValues[lot.id] : minNextBid}" 
+                                           min="${minNextBid}" step="10"
+                                           onkeydown="if(event.key === 'Enter') placeBid('${lot.id}', ${currentBid})"
+                                           class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 font-mono focus:outline-none focus:border-zinc-500">
+                                    <button onclick="placeBid('${lot.id}', ${currentBid})" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold px-4 py-2 rounded-lg text-sm transition shrink-0">
+                                        Ставка
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="bg-zinc-950 text-center py-2.5 rounded-lg font-semibold text-zinc-500 text-xs uppercase tracking-wider mb-4 border border-zinc-800">
+                                    Аукціон завершено
+                                </div>
+                            `}
+
+                            <!-- Історія завжди відкрита (open) -->
+                            <details class="group" open>
+                                <summary class="text-xs text-zinc-500 cursor-pointer hover:text-zinc-300 transition flex justify-between items-center select-none mb-2">
+                                    <span>Історія ставок (${lotBids.length})</span>
+                                </summary>
+                                <ul class="space-y-1.5 text-xs max-h-36 overflow-y-auto pr-1">
+                                    ${lotBids.length > 0 ? lotBids.map(h => `
+                                        <li class="flex justify-between py-1 border-b border-zinc-800/50 text-zinc-400">
+                                            <span class="font-medium text-zinc-300">${h.bidder}</span>
+                                            <span class="font-mono">${h.amount.toLocaleString('uk-UA')} грн</span>
+                                        </li>
+                                    `).join('') : '<li class="text-zinc-600 text-[11px]">Ставок ще немає</li>'}
+                                </ul>
+                            </details>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Логіка ставки
+        function placeBid(lotId, currentBid) {
+            if (!currentUserName) {
+                alert("Будь ласка, вкажіть ваше ім'я у верхньому правому кутку перед тим, як робити ставку!");
+                return;
+            }
+
+            const input = document.getElementById(`input-${lotId}`);
+            const amount = parseInt(input.value);
+
+            const lotBids = bidsData[lotId] || [];
+            const hasBids = lotBids.length > 0;
+
+            if (isNaN(amount) || (hasBids && amount <= currentBid) || (!hasBids && amount < currentBid)) {
+                alert("Ваша ставка повинна бути більшою за поточну!");
+                return;
+            }
+
+            if (!bidsData[lotId]) {
+                bidsData[lotId] = [];
+            }
+
+            bidsData[lotId].unshift({
+                bidder: currentUserName,
+                amount: amount,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+
+            saveBids();
+            renderLots();
+        }
+
+        function formatTime(seconds) {
+            if (seconds <= 0) return "ЗАВЕРШЕНО";
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            if (h > 0) {
+                return `${h}г ${String(m).padStart(2, '0')}хв`;
+            }
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        setInterval(renderLots, 1000);
+        renderLots();
+    </script>
+</body>
+</html>
