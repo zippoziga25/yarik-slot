@@ -63,17 +63,17 @@
         const initialLots = [
             {
                 id: 'lot-1',
-                title: 'Кросівки Nike Air Max',
+                title: 'Ковбаска Ярослава',
                 image: 'images/photo1.jpg',
                 startBid: 1000,
                 endTime: '2026-08-01T20:00:00'
             },
             {
                 id: 'lot-2',
-                title: 'Годинник Casio Vintage',
-                image: 'images/photo2.jpg',
-                startBid: 500,
-                endTime: '2026-08-02T18:00:00'
+                title: 'Назва другого товару',
+                image: 'images/phone.jpg',
+                startBid: 2500,
+                endTime: '2026-08-05T15:30:00'
             }
         ];
 
@@ -86,24 +86,25 @@
 
         function renderLots() {
             const grid = document.getElementById('lots-grid');
-            
-            // Зберігаємо поточні значення з полів вводу, щоб вони не зникали при таймері
-            const inputValues = {};
-            initialLots.forEach(lot => {
-                const el = document.getElementById(`input-${lot.id}`);
-                if (el && document.activeElement === el) {
-                    inputValues[lot.id] = el.value;
-                }
-            });
-
-            grid.innerHTML = '';
 
             if (initialLots.length === 0) {
                 grid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-500">Наразі немає активних лотів.</div>`;
                 return;
             }
 
+            // Перемальовуємо повністю лише якщо кількість лотів змінилася
+            if (grid.children.length !== initialLots.length) {
+                grid.innerHTML = '';
+                initialLots.forEach(lot => {
+                    const card = document.createElement('div');
+                    card.id = `card-${lot.id}`;
+                    card.className = `bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden flex flex-col shadow-md`;
+                    grid.appendChild(card);
+                });
+            }
+
             initialLots.forEach(lot => {
+                const card = document.getElementById(`card-${lot.id}`);
                 const lotBids = bidsData[lot.id] || [];
                 const highestBidObj = lotBids.length > 0 ? lotBids[0] : null;
                 
@@ -118,8 +119,10 @@
                 const minNextBid = lotBids.length > 0 ? currentBid + 50 : currentBid;
                 const isUserLeading = highestBidder === currentUserName && currentUserName !== '';
 
-                const card = document.createElement('div');
                 card.className = `bg-zinc-900 rounded-xl border ${isUserLeading ? 'border-zinc-400' : 'border-zinc-800'} overflow-hidden flex flex-col shadow-md`;
+
+                const inputEl = document.getElementById(`input-${lot.id}`);
+                const currentInputValue = inputEl ? inputEl.value : minNextBid;
 
                 card.innerHTML = `
                     <div class="relative h-56 bg-zinc-950 overflow-hidden border-b border-zinc-800">
@@ -156,7 +159,7 @@
                                 <div class="flex gap-2 mb-4">
                                     <input type="number" id="input-${lot.id}" 
                                            placeholder="Мін: ${minNextBid}" 
-                                           value="${inputValues[lot.id] !== undefined ? inputValues[lot.id] : minNextBid}" 
+                                           value="${currentInputValue}" 
                                            min="${minNextBid}" step="10"
                                            onkeydown="if(event.key === 'Enter') placeBid('${lot.id}', ${currentBid})"
                                            class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 font-mono focus:outline-none focus:border-zinc-500">
@@ -170,7 +173,6 @@
                                 </div>
                             `}
 
-                            <!-- Історія завжди відкрита (open) -->
                             <details class="group" open>
                                 <summary class="text-xs text-zinc-500 cursor-pointer hover:text-zinc-300 transition flex justify-between items-center select-none mb-2">
                                     <span>Історія ставок (${lotBids.length})</span>
@@ -187,7 +189,6 @@
                         </div>
                     </div>
                 `;
-                grid.appendChild(card);
             });
         }
 
